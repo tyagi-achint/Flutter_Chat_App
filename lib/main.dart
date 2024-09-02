@@ -4,9 +4,11 @@ import 'screens/login_screen.dart';
 import 'screens/registration_screen.dart';
 import 'package:flutter/material.dart';
 
-void main() => runApp(FlashChat());
+void main() {
+  runApp(FamilyChat());
+}
 
-class FlashChat extends StatelessWidget {
+class FamilyChat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
