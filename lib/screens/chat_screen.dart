@@ -1,7 +1,11 @@
+import 'package:chat_app/components/message_bubble.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants.dart';
+
+late User loggedInUser;
+final _fireStore = FirebaseFirestore.instance;
 
 class ChatScreen extends StatefulWidget {
   static String id = 'chat_screen';
@@ -11,7 +15,9 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final _auth = FirebaseAuth.instance;
-  late User loggedInUser;
+  late String messageText;
+
+  final messageController = TextEditingController();
 
   @override
   void initState() {
@@ -24,7 +30,6 @@ class _ChatScreenState extends State<ChatScreen> {
       final user = _auth.currentUser;
       if (user != null) {
         loggedInUser = user;
-        print(loggedInUser.email);
       }
     } catch (e) {
       print(e);
@@ -38,20 +43,22 @@ class _ChatScreenState extends State<ChatScreen> {
           leading: null,
           actions: <Widget>[
             IconButton(
-                icon: Icon(Icons.close),
-                onPressed: () {
-                  _auth.signOut();
-                  Navigator.pop(context);
-                }),
+              icon: Icon(Icons.close),
+              onPressed: () {
+                _auth.signOut();
+                Navigator.pop(context);
+              },
+            ),
           ],
           title: Text('⚡️Chat'),
-          backgroundColor: Colors.lightBlueAccent,
+          backgroundColor: Colors.blue.shade700,
         ),
         body: SafeArea(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
+              MessagesStream(),
               Container(
                 decoration: kMessageContainerDecoration,
                 child: Row(
@@ -59,15 +66,26 @@ class _ChatScreenState extends State<ChatScreen> {
                   children: <Widget>[
                     Expanded(
                       child: TextField(
+                        controller: messageController,
                         onChanged: (value) {
-                          //Do something with the user input.
+                          messageText = value;
                         },
                         decoration: kMessageTextFieldDecoration,
                       ),
                     ),
                     TextButton(
                       onPressed: () {
-                        //Implement send functionality.
+                        if (messageText.isNotEmpty) {
+                          messageController.clear();
+                          _fireStore.collection('messages').add({
+                            'text': messageText,
+                            'sender': loggedInUser.email,
+                            'timestamp': FieldValue.serverTimestamp(),
+                          });
+                          setState(() {
+                            messageText = '';
+                          });
+                        }
                       },
                       child: Text(
                         'Send',
@@ -81,6 +99,49 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class MessagesStream extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+      stream: _fireStore
+          .collection('messages')
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Center(
+            child: CircularProgressIndicator(
+              backgroundColor: Colors.lightBlueAccent,
+            ),
+          );
+        }
+        final messages = snapshot.data!.docs;
+        List<Widget> messageBubbles = [];
+
+        for (var message in messages) {
+          final messageText = message['text'];
+          final messageSender = message['sender'];
+          final currentUser = loggedInUser.email;
+          final messageBubble = MessageBubble(
+            sender: messageSender,
+            text: messageText,
+            isMe: currentUser == messageSender,
+          );
+          messageBubbles.add(messageBubble);
+        }
+
+        return Expanded(
+          child: ListView(
+            reverse: true,
+            padding: EdgeInsets.symmetric(horizontal: 15, vertical: 25),
+            children: messageBubbles,
+          ),
+        );
+      },
     );
   }
 }

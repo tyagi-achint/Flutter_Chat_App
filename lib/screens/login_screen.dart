@@ -16,7 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _auth = FirebaseAuth.instance;
   late String email;
   late String password;
- bool showSpinner = false;
+  bool showSpinner = false;
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -29,11 +29,13 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Hero(
-                  tag: 'logo',
-                  child: Container(
-                    height: 200.0,
-                    child: Image.asset('images/logo.png'),
+                Flexible(
+                  child: Hero(
+                    tag: 'logo',
+                    child: Container(
+                      height: 200.0,
+                      child: Image.asset('images/logo.png'),
+                    ),
                   ),
                 ),
                 SizedBox(
@@ -68,15 +70,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 RoundButton(
                   btnColor: Colors.lightBlueAccent,
                   btnText: 'Log In',
-                  btnPressed: () async {setState(() {
+                  btnPressed: () async {
+                    setState(() {
                       showSpinner = true;
                     });
                     try {
                       await _auth.signInWithEmailAndPassword(
                           email: email, password: password);
-                      Navigator.pushNamed(context, ChatScreen.id);setState(() {
-                      showSpinner = false;
-                    });
+                      Navigator.pushNamed(context, ChatScreen.id);
+                      setState(() {
+                        showSpinner = false;
+                      });
                     } catch (e) {
                       print(e);
                     }
